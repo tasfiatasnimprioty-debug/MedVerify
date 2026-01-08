@@ -1,11 +1,10 @@
 
 <?php
-    session_start();
-
-    if(isset($_SESSION['status']) !== true){
-        header('location: ../Views/login.php');
-    }
-
+session_start();
+if(!isset($_SESSION['status'])) {
+    header('location: login.php');
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -44,7 +43,7 @@
         <table width="100%">
             <tr>
                 <td align="center">
-                    <h2>Welcome <?php echo $_SESSION['username'] ?? 'User'; ?></h2>
+                    <h2>Welcome <?php echo $_SESSION['full_name']; ?></h2>
                     <p>Verify Doctors and Medicines manually</p>
                 </td>
             </tr>
@@ -54,23 +53,13 @@
             <!-- Doctor Verification Box -->
             <div class="verification-box">
                 <h3>Doctor Verification</h3>
-                <p>Enter Doctor ID to verify:</p>
+        
                 
                 <input type="text" id="doctorId" placeholder="Enter Doctor ID (e.g., DOC001)">
                 <button onclick="verifyDoctor()">Verify Doctor</button>
                 
                 <div id="doctorResult" class="result-box"></div>
-                
-                <div class="info-box">
-                    <h4>Sample Doctor IDs:</h4>
-                    <ul>
-                        <li>DOC001 - Dr. John Smith</li>
-                        <li>DOC002 - Dr. Sarah Johnson</li>
-                        <li>DOC003 - Dr. Michael Brown</li>
-                        <li>DOC004 - Dr. Emily Davis</li>
-                        <li>DOC005 - Dr. Robert Wilson</li>
-                    </ul>
-                </div>
+              
             </div>
 
             <!-- Medicine Verification Box -->
@@ -83,16 +72,6 @@
                 
                 <div id="medicineResult" class="result-box"></div>
                 
-                <div class="info-box">
-                    <h4>Sample Medicine Codes:</h4>
-                    <ul>
-                        <li>MED001 - Paracetamol 500mg (ABC Pharma)</li>
-                        <li>MED002 - Amoxicillin 250mg (XYZ Drugs)</li>
-                        <li>MED003 - Ibuprofen 400mg (MediCorp)</li>
-                        <li>MED004 - Cetirizine 10mg (HealthPlus)</li>
-                        <li>MED005 - Metformin 500mg (BioLab)</li>
-                    </ul>
-                </div>
             </div>
         </div>
 
@@ -101,23 +80,28 @@
             <tr>
                 <td align="center">
                     <h3>Recent Verification History</h3>
-                    <button onclick="loadHistory()">Refresh History</button>
+                    <button id="refreshHistory">Refresh History</button>
                 </td>
             </tr>
         </table>
 
         <table border="1" width="100%" class="history-table" id="historyTable">
-            <tr>
-                <th>Type</th>
-                <th>Code/ID</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Time</th>
-            </tr>
-            <tr id="historyLoading">
-                <td colspan="5" align="center">Loading history...</td>
-            </tr>
-        </table>
+    <thead>
+        <tr>
+            <th>Type</th>
+            <th>Code/ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Time</th>
+          
+        </tr>
+    </thead>
+    <tbody id="historyBody">
+        <!-- History will be loaded here via JavaScript -->
+         <tr><td colspan="5">Loading history...</td>
+    </tbody>
+</table>
+
 
         <!-- Fake Medicine Info Section -->
         <div style="margin-top: 40px; padding: 20px; background-color: #fff3cd; border: 1px solid #ffeaa7;">

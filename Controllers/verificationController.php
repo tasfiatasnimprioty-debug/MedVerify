@@ -1,148 +1,131 @@
 <?php
 session_start();
+require_once '../Models/alldb.php';
 
-class VerificationController {
+// Check login
+if(!isset($_SESSION['status'])) {
+    header('location: ../Views/login.php');
+    exit();
+}
+
+// Handle AJAX requests
+if(isset($_GET['action'])) {
+    $action = $_GET['action'];
     
-    public function index() {
-        if(!isset($_SESSION['status'])) {
-            header('location: ../Views/login.php');
-            exit();
-        }
-        
+    if($action == 'checkDoctor') {
+        checkDoctor();
+    } 
+    elseif($action == 'checkMedicine') {
+        checkMedicine();
+    }
+    elseif($action == 'getHistory') {
+        getHistory();
+    }
+    elseif($action == 'getSampleData') {
+        getSampleData();
+    }
+} else {
+    // Load verification page
+    include '../Views/verification.php';
+}
+
+// Doctor verification function
+function checkDoctor() {
+    $doctorId = $_POST['doctor_id'];
+    
+    if(empty($doctorId)) {
+        echo json_encode(['status' => 'error', 'message' => 'Please enter Doctor ID']);
+        return;
     }
     
-    public function checkDoctor() {
-        if(!isset($_SESSION['status'])) {
-            header('location: ../Views/login.php');
-         
-            exit();
-        }
-        
-        $doctorId = $_POST['doctor_id'] ?? '';
-        
-        // Sample doctor IDs for verification
-        $validDoctors = [
-            'DOC001' => 'Dr. John Smith',
-            'DOC002' => 'Dr. Sarah Johnson',
-            'DOC003' => 'Dr. Michael Brown',
-            'DOC004' => 'Dr. Emily Davis',
-            'DOC005' => 'Dr. Robert Wilson'
-        ];
-        
-        if(isset($validDoctors[$doctorId])) {
-            $result = [
-                'status' => 'verified',
-                'message' => 'Doctor Verified Successfully!',
-                'doctor_name' => $validDoctors[$doctorId],
-                'doctor_id' => $doctorId
-            ];
-            
-            // Store in session history
-            $this->addToHistory('doctor', $doctorId, $validDoctors[$doctorId], 'verified');
-        } else {
-            $result = [
-                'status' => 'not_found',
-                'message' => 'Doctor ID Not Found!',
-                'doctor_id' => $doctorId
-            ];
-            
-            // Store in session history
-            $this->addToHistory('doctor', $doctorId, 'Unknown', 'not_found');
-        }
-        
-        echo json_encode($result);
-    }
+    $doctor = verifyDoctor($doctorId);
     
-    public function checkMedicine() {
-        if(!isset($_SESSION['status'])) {
-            echo json_encode(['error' => 'Not authenticated']);
-            exit();
-        }
+    if($doctor) {
+        // Save to history
+        addVerification($_SESSION['user_id'], 'doctor', $doctor['doctor_id'], $doctor['name'], 'verified');
         
-        $medicineCode = $_POST['medicine_code'] ?? '';
+        echo json_encode([
+            'status' => 'verified',
+            'message' => 'Doctor Verified Successfully!',
+            'doctor_name' => $doctor['name'],
+            'doctor_id' => $doctor['doctor_id'],
+            'specialization' => $doctor['specialization']
+        ]);
+    } else {
+        // Save failed attempt
+        addVerification($_SESSION['user_id'], 'doctor', $doctorId, 'Unknown', 'not_found');
         
- 
-        $validMedicines = [
-            'MED001' => ['name' => 'Paracetamol 500mg', 'company' => 'ABC Pharma'],
-            'MED002' => ['name' => 'Amoxicillin 250mg', 'company' => 'XYZ Drugs'],
-            'MED003' => ['name' => 'Ibuprofen 400mg', 'company' => 'MediCorp'],
-            'MED004' => ['name' => 'Cetirizine 10mg', 'company' => 'HealthPlus'],
-            'MED005' => ['name' => 'Metformin 500mg', 'company' => 'BioLab']
-        ];
-        
-        if(isset($validMedicines[$medicineCode])) {
-            $result = [
-                'status' => 'verified',
-                'message' => 'Medicine Verified Successfully!',
-                'medicine_name' => $validMedicines[$medicineCode]['name'],
-                'company' => $validMedicines[$medicineCode]['company'],
-                'medicine_code' => $medicineCode
-            ];
-            
-            // Store in session history
-            $this->addToHistory('medicine', $medicineCode, $validMedicines[$medicineCode]['name'], 'verified');
-        } else {
-            $result = [
-                'status' => 'not_found',
-                'message' => 'Medicine Code Not Found!',
-                'medicine_code' => $medicineCode
-            ];
-            
-            // Store in session history
-            $this->addToHistory('medicine', $medicineCode, 'Unknown', 'not_found');
-        }
-        
-        echo json_encode($result);
-    }
-    
-    public function getHistory() {
-        if(!isset($_SESSION['status'])) {
-            echo json_encode(['error' => 'Not authenticated']);
-            exit();
-        }
-        
-        $history = $_SESSION['verification_history'] ?? [];
-        echo json_encode(array_slice($history, 0, 5)); // Return last 5 entries
-    }
-    
-    private function addToHistory($type, $code, $name, $status) {
-        if(!isset($_SESSION['verification_history'])) {
-            $_SESSION['verification_history'] = [];
-        }
-        
-        $entry = [
-            'type' => $type,
-            'code' => $code,
-            'name' => $name,
-            'status' => $status,
-            'timestamp' => date('Y-m-d H:i:s')
-        ];
-        
-        array_unshift($_SESSION['verification_history'], $entry); // Add to beginning
-        
-        // Keep only last 5 entries
-        $_SESSION['verification_history'] = array_slice($_SESSION['verification_history'], 0, 5);
+        echo json_encode([
+            'status' => 'not_found',
+            'message' => 'Doctor ID Not Found!',
+            'doctor_id' => $doctorId
+        ]);
     }
 }
 
-// Handle requests
-$controller = new VerificationController();
-
-if(isset($_GET['action'])) {
-    switch($_GET['action']) {
-        case 'checkDoctor':
-            $controller->checkDoctor();
-            break;
-        case 'checkMedicine':
-            $controller->checkMedicine();
-            break;
-        case 'getHistory':
-            $controller->getHistory();
-            break;
-        default:
-            $controller->index();
+// Medicine verification function
+function checkMedicine() {
+    $medicineCode = $_POST['medicine_code'];
+    
+    if(empty($medicineCode)) {
+        echo json_encode(['status' => 'error', 'message' => 'Please enter Medicine Code']);
+        return;
     }
-} else {
-    $controller->index();
+    
+    $medicine = verifyMedicine($medicineCode);
+    
+    if($medicine) {
+        // Save to history
+        addVerification($_SESSION['user_id'], 'medicine', $medicine['medicine_code'], $medicine['name'], 'verified');
+        
+        echo json_encode([
+            'status' => 'verified',
+            'message' => 'Medicine Verified Successfully!',
+            'medicine_name' => $medicine['name'],
+            'company' => $medicine['company'],
+            'medicine_code' => $medicine['medicine_code']
+        ]);
+    } else {
+        // Save failed attempt
+        addVerification($_SESSION['user_id'], 'medicine', $medicineCode, 'Unknown', 'not_found');
+        
+        echo json_encode([
+            'status' => 'not_found',
+            'message' => 'Medicine Code Not Found!',
+            'medicine_code' => $medicineCode
+        ]);
+    }
+}
+
+
+
+// Get history function
+function getHistory() {
+    $history = getUserHistory($_SESSION['user_id']);
+    
+    $formatted = [];
+    foreach($history as $item) {
+        $formatted[] = [
+            'type' => $item['type'],
+            'code' => $item['code'],
+            'name' => $item['name'],
+            'status' => $item['status'],
+            'timestamp' => date('M d, h:i A', strtotime($item['created_at']))
+        ];
+    }
+    
+    echo json_encode($formatted);
+}
+
+
+// Get sample data function
+function getSampleData() {
+    $doctors = getAllDoctors();
+    $medicines = getAllMedicines();
+    
+    echo json_encode([
+        'doctors' => $doctors,
+        'medicines' => $medicines
+    ]);
 }
 ?>

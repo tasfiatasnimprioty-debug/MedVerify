@@ -1,27 +1,30 @@
 <?php
-    session_start();
-    //print_r($_GET);
-    //var_dump($_GET);
-    if(isset($_POST['submit'])){
-        $username = $_REQUEST['username'];
-        $password = $_REQUEST['password'];
+session_start();
+require_once '../Models/alldb.php';
 
-        if($username == "null" || $password == ""){
-            echo "null value!";
-        }else{
-
-            if($username == $password){
-                //echo "valid user!";
-                $_SESSION['status'] = true;
-                $_SESSION['username'] = $username;
-
-                header('location: ../Views/dashboard.php');
-            }else{
-                echo "invalid user!";
-            }
-        }
-    }else{
-        //echo "please submit login form!";
-        header('location: ../Views/login.php');
+// Check if form submitted
+if(isset($_POST['submit'])){
+    $username = $_POST['username'];
+    $password = $_POST['password'];
+    
+    // Call login function
+    $user = login($username, $password);
+    
+    if($user) {
+        // Set session
+        $_SESSION['status'] = true;
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['full_name'] = $user['full_name'];
+        
+        // Redirect to home
+        header('location: ../Views/dashboard.php');
+    } else {
+        echo "Invalid username or password!";
+        echo '<br><a href="../Views/login.php">Try Again</a>';
     }
+} else {
+    // Direct access - redirect to login
+    header('location: ../Views/login.php');
+}
 ?>

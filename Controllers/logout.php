@@ -1,10 +1,5 @@
 <?php
-
-    session_start();
-    session_destroy();
-
-    unset($_SESSION['status']);
-
-    header('location:../Views/logout.php');
-
+session_start();
+session_destroy();
+header('location: ../Views/login.php');
 ?>
